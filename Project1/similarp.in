@@ -1,0 +1,6 @@
+(load "similarp.cl")
+(similarp '() '() )
+(similarp '(a () ()) '(a () ()) )
+(similarp '(a () ()) '(b () ()) )
+(similarp '(a (b () ()) (c () ()) ) '(a (c () ()) (b () ()) ) )
+(similarp '(a (b () ()) (c () ()) ) '(a (b () ()) (e () ()) ) )

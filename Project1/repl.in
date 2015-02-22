@@ -1,0 +1,6 @@
+(load "repl.cl")
+(repl 'a 'b 'x)
+(repl 'a 'b '())
+(repl 'hello 'goodbye '(do not say hello but rather (hello)))
+(repl 'a '(d) '(a (a) ((a)) b (a c)))
+(repl '(a) 'x '(a (a) ((a)) b (a c)))

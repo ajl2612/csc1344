@@ -1,0 +1,8 @@
+(load "counter.cl")
+(counter 'a )
+(counter '() )
+(counter '(a b c) )
+(counter '(a (b) c) )
+(counter '(a b (c)) )
+(counter '((a b) c (d e f )) )
+(counter '(a b (c d e) (f (g h))))

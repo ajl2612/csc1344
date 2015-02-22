@@ -1,0 +1,6 @@
+(load "dupfilter.cl")
+(dupfilter 'x)
+(dupfilter '())
+(dupfilter '(a b c))
+(dupfilter '(a b c d a e f b))
+(dupfilter '(a (b c) d e (b c) a (b c)))
