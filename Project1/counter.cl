@@ -6,7 +6,13 @@
 ;;; Checks to make sure passed parameter is a list. Returns nil otherwise. 
 (defun counter (ele)
 	(cond
-	((listp ele)
+	(sd
+	
+	iii
+	
+	
+	
+	(listp ele)
 		(counter_helper ele)
 	)
 	((atom ele) 
