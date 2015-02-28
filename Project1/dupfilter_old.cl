@@ -39,20 +39,12 @@
 		;; Otherwise, the function is called recursivly with the first 
 		;; list minus the first element and the result list as is. 
 		(
-			( memberp (car lst) results)
-			(dup ( cdr lst) results )
+			(endp ( member (car lst) results :test 'equal))
+			(dup ( cdr lst) (cons  (car lst) results))
 		)
 		( 
 			T
-			(dup ( cdr lst) (cons  (car lst) results))
+			(dup ( cdr lst) results )
 		)
-	)
-)
-
-(defun memberp (ele lst)
-	(cond
-		((endp lst) nil)
-		( (equal (car lst) ele ) T )
-		( T (memberp ele (cdr lst) ) )
 	)
 )
