@@ -1,0 +1,17 @@
+procedure main()
+	writes(">")
+	while line := read() do{
+		write( line )
+
+	s := trim(line," ")
+  	s ? {                               # Establish string scanning environment 
+   	   	while not pos(0) do  {          # Test for end of string 
+			tab(many(' '))              # Skip past any blanks
+			word := tab(upto(' ') | 0)  
+			write(word)
+		}
+   	}
+}
+
+
+end
