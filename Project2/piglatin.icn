@@ -1,5 +1,5 @@
 procedure main()
-	local letter, words, text, output, startWord, endWord
+	local letter, words, text, output, startWord, endWord, actualOutput
 	
 	letter := &letters
 
@@ -8,8 +8,9 @@ procedure main()
 		startWord := 1
 		endWord := 1
 		output := ""
+		actualOutput := ""
 
-		text ? while tab(upto(letter)) do{ 
+		text ? while tab(upto(letter)) do { 
 			output := output || text[endWord:&pos]
 			startWord := &pos 
 			tab(many(letter))
@@ -17,7 +18,21 @@ procedure main()
 			output := output || piggify( text[startWord:endWord] )
 		}
 		output := output || text[0:endWord]
-		write(output)
+		
+		#replace all instances of more than one space with one space
+		
+		startWord := 1
+		endWord := 1
+		
+		output ? while tab(upto(" ")) do {
+			actualOutput := actualOutput || output[endWord:&pos]
+			startWord := &pos
+			tab(many(" "))
+			endWord := &pos
+			actualOutput := actualOutput || " "
+		}
+
+		write(actualOutput)
 	}
 	
 end
