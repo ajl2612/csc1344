@@ -1,4 +1,4 @@
-# Created by https://www.gitignore.io
+l# Created by https://www.gitignore.io
 
 ### OSX ###
 .DS_Store
@@ -29,3 +29,9 @@ Temporary Items
 *.fasl
 *.lisp-temp
 
+
+### Icon Programming ###
+hello
+piglatin
+lispsyn
+phred
