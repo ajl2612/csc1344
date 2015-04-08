@@ -1,17 +1,218 @@
+# Tried to do this the correct way based on what we learned
+# in class with parsing and component verification. Gave up
+# and implemented derp() solution due to struggling with the
+# language.
+
 procedure main()
+
+	local line, s, word, resTable
+
+	resTable := table(-1)
+	True := 0
+	False := 1
+
+
 	writes(">")
 	while line := read() do{
-		write( line )
 
-	s := trim(line," ")
-  	s ? {                               # Establish string scanning environment 
-   	   	while not pos(0) do  {          # Test for end of string 
-			tab(many(' '))              # Skip past any blanks
-			word := tab(upto(' ') | 0)  
-			write(word)
+		#write(line)
+
+		if ( derp(line ) == 0 ) then {
+			write("CORRECT")
+		} else {
+			write("INCORRECT")
 		}
-   	}
-}
 
+		#if ( isSExpr(line ) == 0 ) then {
+		#	write("CORRECT")
+		#} else {
+		#	write("INCORRECT")
+		#}
+
+		writes(">")
+	}
+
+
+end
+
+
+# returns 0 if valid and 1 if invalid
+procedure derp(line)
+
+	local parenCount, done, index
+
+	parenCount := 0
+	done := 0
+	index := 0
+
+
+	while ( done == 0 ) do {
+		index := index + 1
+
+		if( line[index] == "\(") then {
+			parenCount +:= 1
+
+		} else if( line[index] == "\)") then {
+			parenCount -:= 1
+			if( parenCount < 0) then {
+				return 1
+			}
+
+		}else if( any(&letters ++ ' ', line[index]) ) then {
+			#do nothing
+
+		} else {
+			#invalid
+			return 1
+		}
+
+		if( index >= *line) then {
+			done := 1
+		}
+	}
+
+	if (parenCount == 0 ) then {
+		return 0
+	} else {
+		return 1
+	}
+
+end
+
+
+#returns 0 if line is a s expression and 1 if not
+
+procedure isSExpr(line)
+
+	if( isAtom(line ) == 0 ) then {
+		return 0
+	} else if( line[1] == "\(" & line[-1] == "\)") then {
+
+
+		return isList(line[2:-1])
+	} else {
+		return 1
+	}
+
+
+
+end
+
+
+#returns 0 if line is a list and 1 if not
+
+procedure isList(line)
+
+	local index, done, returnVal, charFound, blocks
+
+	write("LINE$" || line || "&LINE")
+
+	if ( line == "" ) then {
+		# line is empty string
+		return 0
+
+	}
+
+	#check if line is only whitespace characters
+
+	done := 0
+	index := 0
+	returnVal := 0
+
+	while ( done == 0 ) do {
+		index := index + 1
+
+		if( line[index] == " ") then {
+			#do nothing
+
+		} else{
+			returnVal +:= 1
+			done := 1
+		}
+
+		if( index >= *line) then {
+			done := 1
+		}
+	}
+
+	if( returnVal == 0 ) then {
+		return 0
+	}
+
+
+	# Separate the line at the first whitespace character
+	# after text. Returns the result of isSExpr on the
+	# second half
+
+	done := 0
+	index := 0
+	returnVal := 0
+	charFound := 0
+
+	while ( done == 0 ) do {
+		index := index + 1
+
+		if( line[index] == " " ) then {
+			if( charFound == 0 ) then {
+				#do nothing
+			} else {
+				done := 1
+			}
+
+		} else {
+			charFound +:= 1
+			cha
+		}
+
+		if( index >= *line) then {
+			done := 1
+		}
+	}
+
+	write("INDEX:" || index)
+	write("FIRST:" || line[1:index] || ":FIRST")
+
+	if( returnVal == 0 ) then {
+		return 0
+	}
+
+	write("POS:" || index)
+
+
+
+	return 1
+
+end
+
+
+
+#returns 0 if line is an atom and 1 if not
+
+procedure isAtom( line )
+
+	local done, index, returnVal, first, second
+
+	done := 0
+	index := 0
+	no := 0
+	returnVal := 0
+
+	 while ( done == 0 ) do {
+
+		index := index + 1
+
+		if( any(&letters, line[index]) ) then {
+			#do nothing
+
+		} else{
+			returnVal +:= 1
+		}
+
+		if( index >= *line) then {
+			done := 1
+		}
+	}
+
+	return returnVal
 
 end

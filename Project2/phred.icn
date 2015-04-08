@@ -1,0 +1,1061 @@
+procedure main()
+	local raw, input, continue, arg, varTable
+
+	varTable := table(0)
+
+	while raw := read() do{
+
+		processStatement(raw, varTable)
+	}
+
+	write("")
+	printVarTable(varTable)
+
+end
+
+
+
+procedure processStatement( stmt, varTable)
+
+	local arg, continue, input
+
+	input := strStrip(stmt)
+	continue := 0
+
+	if input ? match("define") & continue == 0 then {
+		arg := input[7:0]
+		defineStatement(arg, varTable)
+		continue := 1
+
+	} else if input ? match("let") & continue == 0 then {
+		arg := input[4:0]
+		assignStatement(arg, varTable)
+		continue := 1
+
+	} else if input ? match("if") & continue == 0 then {
+		arg := input[3:0]
+		branchStatement(arg, varTable)
+		continue := 1
+
+	} else if input ? match("prt") & continue == 0 then {
+		arg := input[4:0]
+		printStatement(arg)
+		continue := 1
+
+	} else if input ? match("display") & continue == 0 then {
+		arg := input[8:0]
+		displayStatement(arg, varTable)
+		continue := 1
+
+	}else{
+		write("invalid expression")
+	}
+
+
+end
+
+
+# PHRED supports one data type, which is a 32-bit, two's
+# complement integer representation. All variables must
+# be declared before their first use; this is done with
+# the define statement: define  var [ ',' var ]*
+# The later section denoted with a * may be repeated
+# zero or more times on a single line.
+
+procedure defineStatement( line, varTable )
+
+	#write("found define statement" )
+	#write(line)
+
+	local var
+
+	line ? while tab(upto(&letters ++ &digits)) do{
+		var:= tab(many(&letters ++ &digits))
+		if *var <= 7 then {
+			if( notVariable(var, varTable) == 0) then {
+				varTable[var] := 1
+				#write("VAR:" || var)
+				#write(varTable[var])
+			} else {
+				#write("IGNORED:" || var || " ALREADY DECLARED")
+			}
+		} else {
+			var:= var[1:8]
+			if( notVariable(var, varTable) == 0) then {
+				varTable[var] := 1
+				#write("VAR:" || var)
+				#write(varTable[var])
+			} else {
+				#write("IGNORED:" || var || " ALREADY DECLARED")
+			}
+		}
+	}
+	return 1
+
+end
+
+
+
+# Assignment to a PHRED variable is accomplished with a
+# statement of the form: let  var  ':='  expr
+# var must already be defined. and expr must be an expression
+
+procedure assignStatement(line, varTable)
+
+	local done, index, var, expr
+
+	#write("found assign statement" )
+
+	done := 0
+	index := 0
+	var :=0
+	expr := 0
+
+	while ( done == 0 ) do {
+		index := index + 1
+
+		if( line[index] == ":" & line[index+1] == "=") then {
+			done := 1
+			#write("found")
+		}
+	}
+
+	var := line[1:index]
+	expr := line[index+2:0]
+
+	varTable[var] := evaluateExpression(expr, varTable)
+
+	return 1
+
+end
+
+
+
+# PHRED supports the conditional execution of statements
+# with the construct: if  bexpr  then  stmt
+# where bexpr is a boolean expression and stmt is a
+# statement.
+
+procedure branchStatement(line, varTable)
+
+	local done, index, cond, stmt, result
+
+	#write("found branch statement" )
+
+	done := 0
+	index := 0
+
+	while ( done == 0 ) do {
+		index := index + 1
+
+		if( line[index:index+4] ? match("then") ) then {
+			done := 1
+			#write("found")
+		}
+	}
+
+	cond := line[1:index]
+	stmt := line[index+4:0]
+
+	#write("COND:" || cond)
+	#write("STMT:" || stmt)
+
+	result := reduceBool(cond, varTable)
+
+	if( result > 0 ) then {
+		#write("expression passed")
+		processStatement(stmt, varTable)
+	} else {
+		# do nothing since expression failed
+		#write("expression failed")
+	}
+
+	return 1
+
+end
+
+
+
+procedure printStatement(input)
+
+	local output, out, startWord, endWord, continue, line
+
+	#write("found print statement" )
+
+	startWord := 1
+	endWord := 1
+	continue := 0
+
+	output := ""
+	endWord := 1
+	line := input[2:-1]
+
+	# replace all \n characters with new lines
+	line ? while tab(upto("\\")) do {
+
+		output := output || line[endWord:&pos]
+		endWord := &pos+2
+
+		continue := 0
+
+		if line[&pos+1] == "n" & continue == 0 then {
+			output := output || "\n"
+			continue := 1
+
+		} else if line[&pos+1] == "t" & continue == 0 then {
+			output := output || "\t"
+			continue := 1
+
+		} else if line[&pos+1] == "\\" & continue == 0 then {
+			output := output || "\\"
+			continue := 1
+		} else{
+			#this should never execute
+			write("unknown character")
+
+		}
+
+		&pos := &pos+2
+	}
+
+	output := output || line[0:endWord]
+
+	writes(output)
+
+	return 1
+
+end
+
+
+
+# Each element is printed in a field consisting of one
+# space followed by a minimal-width sequence of digits.
+
+procedure displayStatement(line, varTable)
+
+	local retVal, var
+
+	#write("found display statement" )
+
+	retVal := ""
+
+	line ? while tab(upto(&letters ++ &digits)) do{
+		var:= tab(many(&letters ++ &digits))
+		if *var <= 7 then {
+			if( notVariable(var, varTable) >= 1) then {
+				retVal := retVal || " " || varTable[var]
+			} else {
+				#write("IGNORED:" || var || " NOT ALREADY DECLARED")
+			}
+		} else {
+			var:= var[1:8]
+			if( notVariable(var, varTable) >= 1) then {
+				retVal := retVal || " " || varTable[var]
+			} else {
+				#write("IGNORED:" || var || "NOT  ALREADY DECLARED")
+			}
+		}
+	}
+
+	writes( retVal )
+
+	return 1
+
+end
+
+
+
+# Facade for all expression reduction calls
+# Determines if the given expression is a boolean or
+# arithmetic expression. Calls the appropriate evaluate
+# function and returns its result.
+
+procedure evaluateExpression( expr, varTable)
+
+	if( hasBool(expr) >= 1) then {
+		#write("BOOL FOUND")
+		return reduceBool( expr, varTable )
+	}
+	else{
+		#write("MATH FOUND")
+		return evaluateArithmetic( expr, varTable )
+	}
+
+end
+
+# Arithmetic expressions in PHRED consist of a sequence of
+# one or more elements separated by the standard C arithmetic
+# operators ('+', '-', '*', '/', '%'), with the standard
+# precedence and associativity. Parenthesized subexpressions
+# are allowed. All arithmetic is performed using 32-bit two's
+# complement representation. In the case of division by zero,
+# a result of zero is produced.
+#
+# Facade for the following 400 ish lines of function calls
+# will return the arithmetic result of expr
+
+procedure evaluateArithmetic( expr, varTable)
+
+	if( hasParens(expr) >= 1) then {
+		#write("PARENS FOUND")
+		return reduceParens( expr, varTable )
+	}
+	else{
+		return evalArithExpr( expr, varTable )
+	}
+
+end
+
+
+
+procedure evalArithExpr( expr, varTable )
+
+	local lTerm, rTerm, op, found
+
+	found := 0
+	op:= 0
+
+	if integer(expr) then {
+		#write("NUMBER:" || expr)
+		return expr
+
+	}else if ( notVariable(expr, varTable) >= 1 ) then {
+		#write("VAR:" || expr)
+		lTerm := varTable[expr]
+		return lTerm
+
+	}else if ( hasAddSub(expr) >= 1 ) then {
+		#write("ADD SUB:" || expr)
+		return reduceAddSub(expr, varTable)
+
+	}else if ( hasMulDivMod(expr) >= 1 ) then {
+		#write("MUL MOD OR DIV:" || expr)
+		return reduceMulDivMod(expr, varTable)
+
+	}else {
+			write("MISTAKES WERE MADE")
+	}
+
+
+	return -1
+
+end
+
+
+
+# Reduces the given boolean equation by splitting it into
+# two expressions at the location of the operator. If a
+# ! precedes the operator, the output is negated.
+# In the case of more than one operator, the right most term
+# is selected as the split point.
+# Output values are 0 for false and 1+ for true
+
+procedure reduceBool( expr, varTable )
+
+	local lastLess, lastGreater, lastEq, negated, lTerm, rTerm
+
+	lastLess := 0
+	lastGreater := 0
+	lastEq := 0
+	negated := 0
+
+	expr ? while tab(upto("<")) do {
+		lastLess := &pos
+		&pos := &pos+1
+	}
+
+	expr ? while tab(upto(">")) do {
+		lastGreater := &pos
+		&pos := &pos+1
+	}
+
+	expr ? while tab(upto("=")) do {
+		lastEq := &pos
+		&pos := &pos+1
+	}
+
+	if ( lastLess > lastGreater & lastLess > lastEq ) then {
+
+		if ( expr[lastLess-1] == "!" ) then{
+			#write("NEGATED")
+			negated := 0
+			lTerm := expr[1:lastLess-1]
+			rTerm := expr[lastLess+1:0]
+		}else{
+			lTerm := expr[1:lastLess]
+			rTerm := expr[lastLess+1:0]
+			negated := 1
+		}
+
+		lTerm := evaluateExpression( lTerm, varTable)
+		rTerm := evaluateExpression( rTerm, varTable)
+
+		#write("LESS")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		if ( lTerm < rTerm ) then{
+			# left term less than right
+			if( negated == 0) then {
+				# negate  true output to false
+				return 0
+			} else {
+				# maintain  true output
+				return 1
+			}
+
+		} else {
+			# left term NOT less than right
+				if( negated == 0) then {
+					# negate false output to true
+					return 1
+				} else {
+					# maintain false output
+					return 0
+				}
+		}
+
+	} else if ( lastGreater > lastLess & lastGreater > lastEq ) then {
+
+		if ( expr[lastGreater-1] == "!" ) then{
+			#write("NEGATED")
+			negated := 0
+			lTerm := expr[1:lastGreater-1]
+			rTerm := expr[lastGreater+1:0]
+		}else{
+			lTerm := expr[1:lastGreater]
+			rTerm := expr[lastGreater+1:0]
+			negated := 1
+		}
+
+		lTerm := evaluateExpression( lTerm, varTable)
+		rTerm := evaluateExpression( rTerm, varTable)
+
+		#write("GREATER")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		if ( lTerm > rTerm ) then{
+			# left term greater than right
+			if( negated == 0) then {
+				# negate  true output to false
+				return 0
+			} else {
+				# maintain  true output
+				return 1
+			}
+
+		} else {
+			# left term NOT greater than right
+				if( negated == 0) then {
+					# negate false output to true
+					return 1
+				} else {
+					# maintain false output
+					return 0
+				}
+		}
+
+	} else {
+
+		if ( expr[lastEq-1] == "!" ) then{
+			write("NEGATED")
+			negated := 0
+			lTerm := expr[1:lastEq-1]
+			rTerm := expr[lastEq+1:0]
+		}else{
+			lTerm := expr[1:lastEq]
+			rTerm := expr[lastEq+1:0]
+			negated := 1
+		}
+
+		lTerm := evaluateExpression( lTerm, varTable)
+		rTerm := evaluateExpression( rTerm, varTable)
+
+		#write("EQUAL")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		if ( lTerm == rTerm ) then{
+			# left term equal to right
+			if( negated == 0) then {
+				# negate  true output to false
+				return 0
+			} else {
+				# maintain  true output
+				return 1
+			}
+
+		} else {
+			# left term NOT equal to right
+				if( negated == 0) then {
+					# negate false output to true
+					return 1
+				} else {
+					# maintain false output
+					return 0
+				}
+		}
+	}
+
+end
+
+
+procedure reduceParens( expr, varTable)
+
+	local line, var, done, index, leftP, rightP, newLine, continue, reduce
+
+	line := expr
+	continue := 0
+
+	while( continue == 0 ) do {
+
+		done := 0
+		index := 0
+		leftP :=0
+		rightP := 0
+
+
+		while ( done == 0 ) do {
+			index := index + 1
+
+			if( line[index] == "\(") then {
+				leftP := index
+			}
+
+			if( line[index] == "\)") then {
+				rightP := index
+				done := 1
+			}
+
+			if( index > *line ) then {
+				done := 1
+			}
+		}
+
+		reduce := evalArithExpr( line[leftP+1:rightP], varTable )
+
+		line := line[1:leftP] || reduce || line[rightP+1:0]
+
+		#write(line)
+
+		if( hasParens(line) == 0 ) then {
+			continue := 1
+		}
+	}
+
+	#write("AFTER:" || line)
+
+	return evalArithExpr( line, varTable)
+
+
+end
+
+
+# Reduces the given equation in order from left to right by
+# computing addition and subtraction operations.
+
+procedure reduceAddSub( expr, varTable )
+
+	local lastAdd, lastSub, lTerm, rTerm
+
+	lastAdd := 0
+	lastSub := 0
+
+	expr ? while tab(upto("+")) do {
+		lastAdd := &pos
+		&pos := &pos+1
+	}
+
+	expr ? while tab(upto("-")) do {
+		lastSub := &pos
+		&pos := &pos+1
+	}
+
+	if ( lastAdd > lastSub ) then {
+
+		lTerm := evalArithExpr(expr[1:lastAdd], varTable)
+		rTerm := evalArithExpr(expr[lastAdd+1:0], varTable)
+
+		#write("ADD")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		return ( lTerm  +  rTerm )
+
+	} else {
+
+
+		lTerm := evalArithExpr(expr[1:lastSub], varTable)
+		rTerm := evalArithExpr(expr[lastSub+1:0], varTable)
+
+		#write("SUB")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		return ( lTerm  -  rTerm )
+	}
+
+end
+
+
+
+# Reduces the given equation in order from left to right by
+# computing multiplication division and modulo operations.
+
+procedure reduceMulDivMod( expr, varTable )
+
+	local lastMul, lastDiv, lastMod, lTerm, rTerm
+
+	lastMul := 0
+	lastDiv := 0
+	lastMod := 0
+
+	expr ? while tab(upto("*")) do {
+		lastMul := &pos
+		&pos := &pos+1
+	}
+
+	expr ? while tab(upto("/")) do {
+		lastDiv := &pos
+		&pos := &pos+1
+	}
+
+	expr ? while tab(upto("%")) do {
+		lastMod := &pos
+		&pos := &pos+1
+	}
+
+	if ( lastMul > lastDiv & lastMul > lastMod ) then {
+
+		lTerm := evalArithExpr(expr[1:lastMul], varTable)
+		rTerm := evalArithExpr(expr[lastMul+1:0], varTable)
+
+		#write("MUL")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		return ( lTerm  *  rTerm )
+
+	} else if ( lastDiv > lastMul & lastDiv > lastMod ) then {
+
+		lTerm := evalArithExpr(expr[1:lastDiv], varTable)
+		rTerm := evalArithExpr(expr[lastDiv+1:0], varTable)
+
+		#write("DIV")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		if(rTerm == 0) then {
+			#write("DIV BY 0 WARNING")
+			return 0
+		}
+
+		return ( lTerm  /  rTerm )
+
+	} else {
+
+		lTerm := evalArithExpr(expr[1:lastMod], varTable)
+		rTerm := evalArithExpr(expr[lastMod+1:0], varTable)
+
+		#write("MOD")
+		#write("LTERM:" || lTerm)
+		#write("RTERM:" || rTerm)
+
+		return ( lTerm  %  rTerm )
+	}
+
+end
+
+
+
+# Checks string to see if it contains a quote (") character.
+# If it does not, it returns the evaluation of totalStrip on
+# the entire line. If it does not contain a quote  character,
+# it must be a print statement. Returns the evaluation of
+# totalStrip on all text before the first quote concatenated
+# with the original text inside the quote
+
+procedure strStrip( word )
+
+	local toStrip, maintain, found, first, second, retVal
+
+	toStrip := ""
+	maintain := ""
+	found := 0
+	first := 0
+	second := 0
+
+	word ? while tab(upto("\"")) do {
+		first := second
+		second := &pos
+		&pos := &pos+1
+		found := found + 1
+	}
+
+	if( found == 0) then {
+		return totalStrip(word)
+	} else {
+
+		toStrip := word[1:first]
+		maintain := word[first:second+1]
+
+		#write("STRIP:" || toStrip|| ":STRIP")
+		#write("MAINTAIN:" || maintain ||":MAINTAIN")
+
+		retVal := totalStrip(toStrip)
+		return retVal || maintain
+	}
+
+end
+
+
+
+#removes all whitespace and tab characters from input string
+
+procedure totalStrip( word )
+
+	local line, output, startWord, endWord
+
+	line := word
+
+	startWord := 1
+	endWord := 1
+
+	output := ""
+	endWord := 1
+
+	# remove all whitespace characters
+	line ? while tab(upto(" ")) do {
+		output := output || line[endWord:&pos]
+		startWord := &pos
+		tab(many(" "))
+		endWord := &pos
+	}
+
+	output := output || line[0:endWord]
+	&pos := 1
+
+	#remove all tab characters
+
+	line := output
+	output := ""
+	endWord := 1
+
+	line ? while tab(upto("\t")) do {
+		output := output || line[endWord:&pos]
+		startWord := &pos
+		tab(many("\t"))
+		endWord := &pos
+	}
+
+	output := output || line[0:endWord]
+
+	return output
+end
+
+
+
+# Returns 0 if var is not in var table, returns other if it is
+# in the table.
+
+procedure notVariable( var, varTable)
+	local found, i
+	found := 0
+	every i:= key(varTable) do {
+		if i == var then {
+			found := found + 1
+		}
+	}
+	return found
+end
+
+
+
+# Prints the contents of the system varTable in alphabetical
+# order in the format ":var\t:value"
+
+procedure printVarTable(varTable)
+
+	local ele, lst, line
+
+	lst := list()
+
+	every ele:= key(varTable) do {
+		line := ele || "\t" || varTable[ele]
+		put( lst, line )
+	}
+
+	every write(!sort(lst))
+
+	return 1
+
+end
+
+
+
+# returns 0 if the passes expression is not a boolean expression
+# and returns >1 if it is
+procedure hasBool(expr)
+
+	local sum
+
+	sum := 0
+	sum := sum + hasGreater(expr)
+	sum := sum + hasLess(expr)
+	sum := sum + hasEq(expr)
+
+	return sum
+
+end
+
+
+# Takes sum of has add and sub function and combines the
+# return values.
+procedure hasAddSub(expr)
+
+	local sum
+
+	sum := 0
+	sum := sum + hasAdd(expr)
+	sum := sum + hasSub(expr)
+
+	return sum
+
+end
+
+
+# Takes sum of has mul, mod, and div function and combines the
+# return values.
+procedure hasMulDivMod(expr)
+
+	local sum
+
+	sum := 0
+	sum := sum + hasMul(expr)
+	sum := sum + hasDiv(expr)
+	sum := sum + hasMod(expr)
+
+	return sum
+
+end
+
+
+
+# Returns 0 if the line does not contain an equal (=)
+# character and 1 if it does contain a =
+
+procedure hasEq( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("="))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+# Returns 0 if the line does not contain an greater (>)
+# character and 1 if it does contain a >
+
+procedure hasGreater( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto(">"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+# Returns 0 if the line does not contain an less (<)
+# character and 1 if it does contain a <
+
+procedure hasLess( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("<"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+
+
+# Returns 0 if the line does not contain an add (+)
+# character and 1 if it does contain a +
+
+procedure hasAdd( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("+"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+# Returns 0 if the line does not contain a subtraction (-)
+# character and 1 if it does contain a -
+
+procedure hasSub( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("-"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+
+
+# Returns 0 if the line does not contain a modulo (%)
+# character and 1 if it does contain a %
+
+procedure hasMod( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("%"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+# Returns 0 if the line does not contain a divide (/)
+# character and 1 if it does contain a /
+
+procedure hasDiv( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("/")) do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+# Returns 0 if the line does not contain a multiply (*)
+# character and 1 if it does contain a *
+
+procedure hasMul( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("*"))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
+
+
+# Returns 0 if the line does not contain a parenthesis
+# and 1 if it does contain a parenthesis
+
+procedure hasParens( word )
+
+	local found
+
+	found := 0
+
+	word ? while tab(upto("\("))  do {
+		found := found + 1
+		&pos := &pos+1
+	}
+
+	if( found == 0) then {
+		return 0
+	} else {
+
+		return 1
+	}
+
+end
